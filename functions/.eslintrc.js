@@ -7,9 +7,7 @@ module.exports = {
   },
   parserOptions: {
     ecmaVersion: 6,
-    babelOptions: {
-      configFile: "./babel.config.json",
-    },
+    requireConfigFile: false,
   },
   extends: ["eslint:recommended", "google"],
   rules: {
