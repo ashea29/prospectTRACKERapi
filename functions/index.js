@@ -1,12 +1,12 @@
-const functions = require("firebase-functions");
-const express = require('express')
-const { check, param } = require('express-validator')
-const cors = require('cors')
-const { v4: uuidv4 } = require('uuid')
-const argon = require('argon2')
-const cred = require('./cred.json')
+const functions = require("firebase-functions")
+const express = require("express")
+const { check, param } = require("express-validator")
+const cors = require("cors")
+const { v4: uuidv4 } = require("uuid")
+const argon = require("argon2")
+const cred = require("./cred.json")
 
-const admin = require('firebase-admin')
+const admin = require("firebase-admin")
 
 admin.initializeApp({
   credential: admin.credential.cert(cred),
@@ -17,10 +17,8 @@ app.use(cors({ origin: true }))
 
 const db = admin.firestore()
 
-
-
 // SIGNUP ROUTE
-app.post('/signup', async (req, res) => {
+app.post("/signup", async (req, res) => {
   try {
     const userId = uuidv4()
     const password = req.body.password
@@ -30,41 +28,44 @@ app.post('/signup', async (req, res) => {
       email: req.body.email,
       username: req.body.username,
       password: hashedPassword,
-      isAdmin: false
+      isAdmin: false,
     }
 
     const customToken = await admin
       .auth()
       .createCustomToken(userId, additionalClaims)
-    
+
     const userData = {
       ...additionalClaims,
-      token: customToken
+      token: customToken,
     }
     const docRef = await admin
       .firestore()
-      .collection('users')
+      .collection("users")
       .doc(userId)
       .set(userData)
 
-    res.status(201).send({token: customToken, doc: docRef})
+    res.status(201).send({ token: customToken, doc: docRef })
   } catch (error) {
     res.status(500).send(error)
   }
 })
 
-
 // LOGIN ROUTE
-app.post('/login', async (req, res) => {
+app.post("/login", async (req, res) => {
   try {
     const username = req.body.username
     const password = req.body.password
 
-    const usersRef = db.collection('users')
-    const userRecord = await usersRef.where('username', "==", username).get().docs[0]
+    const usersRef = db.collection("users")
+    const userRecord = await usersRef.where("username", "==", username).get()
+      .docs[0]
     const userRecordFields = await userRecord.data()
 
-    const passwordVerified = await argon.verify(userRecordFields.password, password)
+    const passwordVerified = await argon.verify(
+      userRecordFields.password,
+      password
+    )
 
     if (userRecordFields && passwordVerified) {
       const userId = userRecord.id
@@ -75,16 +76,19 @@ app.post('/login', async (req, res) => {
         isAdmin: userRecordFields.isAdmin,
       }
 
-      const customToken = await admin.auth().createCustomToken(userId, additionalClaims)
+      const customToken = await admin
+        .auth()
+        .createCustomToken(userId, additionalClaims)
 
       res.status(200).send(customToken)
     } else {
-      res.status(400).send('Username or password is invalid, or user record does not exist')
+      res
+        .status(400)
+        .send("Username or password is invalid, or user record does not exist")
     }
   } catch (error) {
     res.status(500).send(error)
   }
 })
-
 
 exports.user = functions.https.onRequest(app)
