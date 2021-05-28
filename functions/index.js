@@ -1,7 +1,7 @@
 const functions = require('firebase-functions')
 const express = require('express')
-const { check, param } = require('express-validator')
 const cors = require('cors')
+const { check, param } = require('express-validator')
 const { v4: uuidv4 } = require('uuid')
 const argon = require('argon2')
 const cred = require('./cred.json')
@@ -14,7 +14,7 @@ admin.initializeApp({
 })
 
 const app = express()
-app.use(cors({ origin: true }))
+app.use(cors({ origin: '*' }))
 
 const db = admin.firestore()
 
@@ -26,7 +26,7 @@ app.post(
     check('username').not().isEmpty().trim().escape(),
     check('email').not().isEmpty().trim().escape().isEmail().normalizeEmail(),
     check('password').not().isEmpty().trim().escape().isLength({ min: 7 }),
-    check('confirm_password')
+    check('confirmPassword')
       .not()
       .isEmpty()
       .trim()
@@ -69,7 +69,7 @@ app.post(
 
       res.status(201).send({ token: customToken, doc: docRef })
     } catch (error) {
-      res.status(500).send(error)
+      res.send(error)
     }
   }
 )
@@ -120,7 +120,7 @@ app.post(
           )
       }
     } catch (error) {
-      res.status(500).send(error)
+      res.send(error)
     }
   }
 )
