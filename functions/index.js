@@ -31,15 +31,25 @@ app.post(
       .isEmpty()
       .trim()
       .escape()
-      .custom((value, { req }) => {
+      .custom((value, { req, res }) => {
         if (value !== req.body.password) {
-          throw new HttpError('Passwords do not match', 422)
+          const error = new HttpError('Passwords do not match', 422)
+          res.send(error)
         }
         return true
       }),
   ],
   async (req, res) => {
-    handleValidationResults(req)
+    handleValidationResults(req, res)
+
+    const usersRef = db.collection('users')
+    const match = await usersRef.where('email', '==', req.body.email).get().docs
+    
+    if (match.length > 0) {
+      const error = new HttpError('A user with this email already exists. Please choose a different email and try again', 422)
+      res.send(error)
+    }
+
     try {
       const userId = uuidv4()
       const password = req.body.password
@@ -88,8 +98,7 @@ app.post(
       const password = req.body.password
 
       const usersRef = db.collection('users')
-      const userRecord = await usersRef.where('email', '==', email).get()
-        .docs[0]
+      const userRecord = await usersRef.where('email', '==', email).get().docs[0]
       const userRecordFields = await userRecord.data()
 
       const passwordVerified = await argon.verify(
