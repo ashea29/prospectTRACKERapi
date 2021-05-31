@@ -1,7 +1,7 @@
 const functions = require('firebase-functions')
 const express = require('express')
 const cors = require('cors')
-const { check, param } = require('express-validator')
+const { check } = require('express-validator')
 const { v4: uuidv4 } = require('uuid')
 const argon = require('argon2')
 const cred = require('./cred.json')
@@ -43,11 +43,26 @@ app.post(
     handleValidationResults(req, res)
 
     const usersRef = db.collection('users')
-    const match = await usersRef.where('email', '==', req.body.email).get()
+    const emailMatch = await usersRef.where('email', '==', req.body.email).get()
+    const usernameMatch = await usersRef.where('username', '==', req.body.email).get()
     
-    if (match.docs.length) {
-      const errorMessage = 'A user with this email already exists. Please choose a different email and try again'
-      throw (errorMessage)
+    let errorMessage
+
+    if (emailMatch.docs.length && usernameMatch.docs.length) {
+      errorMessage = 'Email and username are already in use. Please enter a different email and username, and try again.'
+      const error = new HttpError(errorMessage, 422)
+      res.send(error)  
+      return
+    } else if (emailMatch.docs.length) {
+      errorMessage = 'A user with this email already exists. Please choose a different email and try again.'
+      const error = new HttpError(errorMessage, 422)
+      res.send(error)
+      return
+    } else if (usernameMatch.docs.length) {
+        errorMessage = 'Username is taken. Please choose a different username and try again.'
+        const error = new HttpError(errorMessage, 422)
+        res.send(error)
+        return
     } else {
       try {
         const userId = uuidv4()
@@ -78,7 +93,7 @@ app.post(
   
         res.status(201).send({ token: customToken, doc: docRef })
       } catch (error) {
-        res.status(422).send(error)
+        res.send({code: 422, error: error})
       }
     }
   }
@@ -101,6 +116,8 @@ app.post(
       const userRecord = await usersRef.where('email', '==', email).get().docs[0]
       const userRecordFields = await userRecord.data()
 
+      let errorMessage
+
       const passwordVerified = await argon.verify(
         userRecordFields.password,
         password
@@ -122,14 +139,12 @@ app.post(
 
         res.status(200).send(customToken)
       } else {
-        res
-          .status(400)
-          .send(
-            'Username or password is invalid, or user record does not exist'
-          )
+        errorMessage = 'Username or password is invalid, or user record does not exist'
+        const error = new HttpError(errorMessage, 400)
+        res.send(error)
       }
     } catch (error) {
-      res.send('A message from server Login catch: ', error)
+      res.send({code: 422, error: error})
     }
   }
 )
