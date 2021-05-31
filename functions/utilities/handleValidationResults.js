@@ -9,8 +9,10 @@ const handleValidationResults = (req, res) => {
     validationErrors.array().forEach((err) => {
       invalidFields.push(err.param)
     })
-    res.send({errorCode: 422, message: `Invalid input: [${invalidFields}]. Please verify and try again`})
-    throw new HttpError(`Invalid input: [${invalidFields}]. Please verify and try again`, 422) 
+    const error = new HttpError(`Invalid input: [${invalidFields}]. Please verify and try again`, 422)
+    // res.send({errorCode: 422, message: `Invalid input: [${invalidFields}]. Please verify and try again`})
+    res.send(error)
+    return 
   }
 }
 
