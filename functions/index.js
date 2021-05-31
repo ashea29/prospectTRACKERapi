@@ -43,43 +43,43 @@ app.post(
     handleValidationResults(req, res)
 
     const usersRef = db.collection('users')
-    const match = await usersRef.where('email', '==', req.body.email).get().docs
+    const match = await usersRef.where('email', '==', req.body.email).get()
     
-    if (match.length > 0) {
-      const error = new HttpError('A user with this email already exists. Please choose a different email and try again', 422)
-      res.send(error)
-    }
-
-    try {
-      const userId = uuidv4()
-      const password = req.body.password
-      const hashedPassword = await argon.hash(password)
-
-      const additionalClaims = {
-        firstName: req.body.firstName,
-        username: req.body.username,
-        email: req.body.email,
-        password: hashedPassword,
-        isAdmin: false,
+    if (match.docs.length) {
+      const errorMessage = 'A user with this email already exists. Please choose a different email and try again'
+      throw (errorMessage)
+    } else {
+      try {
+        const userId = uuidv4()
+        const password = req.body.password
+        const hashedPassword = await argon.hash(password)
+  
+        const additionalClaims = {
+          firstName: req.body.firstName,
+          username: req.body.username,
+          email: req.body.email,
+          password: hashedPassword,
+          isAdmin: false,
+        }
+  
+        const customToken = await admin
+          .auth()
+          .createCustomToken(userId, additionalClaims)
+  
+        const userData = {
+          ...additionalClaims,
+          token: customToken,
+        }
+        const docRef = await admin
+          .firestore()
+          .collection('users')
+          .doc(userId)
+          .set(userData)
+  
+        res.status(201).send({ token: customToken, doc: docRef })
+      } catch (error) {
+        res.status(422).send(error)
       }
-
-      const customToken = await admin
-        .auth()
-        .createCustomToken(userId, additionalClaims)
-
-      const userData = {
-        ...additionalClaims,
-        token: customToken,
-      }
-      const docRef = await admin
-        .firestore()
-        .collection('users')
-        .doc(userId)
-        .set(userData)
-
-      res.status(201).send({ token: customToken, doc: docRef })
-    } catch (error) {
-      res.send(error)
     }
   }
 )
@@ -129,7 +129,7 @@ app.post(
           )
       }
     } catch (error) {
-      res.send(error)
+      res.send('A message from server Login catch: ', error)
     }
   }
 )
