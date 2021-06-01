@@ -1,7 +1,7 @@
 const functions = require('firebase-functions')
 const express = require('express')
 const cors = require('cors')
-const { check } = require('express-validator')
+const { check, param } = require('express-validator')
 const { v4: uuidv4 } = require('uuid')
 const argon = require('argon2')
 const cred = require('./cred.json')
@@ -73,7 +73,6 @@ app.post(
           firstName: req.body.firstName,
           username: req.body.username,
           email: req.body.email,
-          password: hashedPassword,
           isAdmin: false,
         }
   
@@ -83,7 +82,7 @@ app.post(
   
         const userData = {
           ...additionalClaims,
-          token: customToken,
+          password: hashedPassword,
         }
         const docRef = await admin
           .firestore()
@@ -113,8 +112,8 @@ app.post(
       const password = req.body.password
 
       const usersRef = db.collection('users')
-      const userRecord = await usersRef.where('email', '==', email).get().docs[0]
-      const userRecordFields = await userRecord.data()
+      const userRecord = await usersRef.where('email', '==', email).get()
+      const userRecordFields = userRecord.docs[0].data()
 
       let errorMessage
 
@@ -124,12 +123,11 @@ app.post(
       )
 
       if (userRecordFields && passwordVerified) {
-        const userId = userRecord.id
+        const userId = userRecord.docs[0].id
         const additionalClaims = {
           firstName: userRecordFields.firstName,
           username: userRecordFields.username,
-          password: userRecordFields.password,
-          email,
+          email: userRecordFields.email,
           isAdmin: userRecordFields.isAdmin,
         }
 
@@ -137,14 +135,15 @@ app.post(
           .auth()
           .createCustomToken(userId, additionalClaims)
 
-        res.status(200).send(customToken)
+        res.status(200).send({token: customToken, userData: { ...additionalClaims }})
       } else {
         errorMessage = 'Username or password is invalid, or user record does not exist'
         const error = new HttpError(errorMessage, 400)
         res.send(error)
       }
     } catch (error) {
-      res.send({code: 422, error: error})
+      console.log(error)
+      res.send({code: 422, error: {adminMsg: 'Unknown error', caughtError: error}})
     }
   }
 )
