@@ -1,5 +1,4 @@
 const { validationResult } = require('express-validator')
-const HttpError = require('../models/httpError')
 
 const handleValidationResults = (req, res) => {
   const validationErrors = validationResult(req)
@@ -9,9 +8,7 @@ const handleValidationResults = (req, res) => {
     validationErrors.array().forEach((err) => {
       invalidFields.push(err.param)
     })
-    const error = new HttpError(`Invalid input: [${invalidFields}]. Please verify and try again`, 422)
-    // res.send({errorCode: 422, message: `Invalid input: [${invalidFields}]. Please verify and try again`})
-    res.send(error)
+    res.send({code: 422, message: `Invalid input: [${invalidFields}]. Please verify and try again`})
     return 
   }
 }
