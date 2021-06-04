@@ -132,7 +132,7 @@ app.post(
 
         res.status(200).send({token: customToken, userData: { ...additionalClaims }})
       } else {
-        errorMessage = 'Username or password is invalid, or user record does not exist'
+        errorMessage = 'Email or password is invalid, or user record does not exist'
         res.send({code: 400, message: errorMessage})
       }
     } catch (error) {
