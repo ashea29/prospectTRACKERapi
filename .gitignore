@@ -70,3 +70,5 @@ cred.json
 /functions/cred.json
 firestore.rules
 
+/functions/utilities/key.js
+

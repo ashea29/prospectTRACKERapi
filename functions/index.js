@@ -4,7 +4,9 @@ const cors = require('cors')
 const { check } = require('express-validator')
 const { v4: uuidv4 } = require('uuid')
 const argon = require('argon2')
+const axios = require('axios')
 const cred = require('./cred.json')
+const key = require('./utilities/key')
 const handleValidationResults = require('./utilities/handleValidationResults')
 
 const admin = require('firebase-admin')
@@ -140,5 +142,40 @@ app.post(
     }
   }
 )
+
+
+// GET LAT/LNG COORDINATES
+// https://maps.googleapis.com/maps/api/geocode/json?address=1600+Amphitheatre+Parkway,+Mountain+View,+CA&key=YOUR_API_KEY
+
+
+app.get(
+  '/coordinates',
+  async (req, res) => {
+    try {
+      const address = req.body.address
+      const coordinatesUrl = `
+        https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(address)}&key=${key}
+      `
+      const response = await axios({
+        method: 'GET',
+        url: coordinatesUrl,
+      })
+      const responseData = response.data
+      if (!responseData || responseData.status === "ZERO_RESULTS") {
+        const error = {code: 422, message: 'Could not find location for the provided address'}
+        return res.send(error)
+      }
+
+      const locationInfo = {
+        formattedAddress: responseData.results[0].formatted_address, 
+        coordinates: responseData.results[0].geometry.location
+      }
+      res.status(200).send({results: locationInfo})
+    } catch (error) {
+      res.send({code: 422, caughtError: error})
+    }
+  }
+)
+
 
 exports.user = functions.https.onRequest(app)
