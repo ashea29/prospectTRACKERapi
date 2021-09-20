@@ -145,12 +145,13 @@ app.post(
 
 
 // GET LAT/LNG COORDINATES
-// https://maps.googleapis.com/maps/api/geocode/json?address=1600+Amphitheatre+Parkway,+Mountain+View,+CA&key=YOUR_API_KEY
-
-
-app.get(
+app.post(
   '/coordinates',
+  [
+    check('address').not().isEmpty().trim().escape(),
+  ],
   async (req, res) => {
+    handleValidationResults(req)
     try {
       const address = req.body.address
       const coordinatesUrl = `
