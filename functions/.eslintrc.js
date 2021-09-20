@@ -21,6 +21,8 @@ module.exports = {
     "comma-dangle": "off",
     "require-jsdoc": "off",
     "eol-last": "off",
+    "no-multiple-empty-lines": "off",
+    "padded-blocks": "off"
   },
   plugins: [
     "@babel/eslint-plugin",
