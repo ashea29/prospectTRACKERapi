@@ -4,6 +4,7 @@ const cors = require('cors')
 const { check } = require('express-validator')
 const { v4: uuidv4 } = require('uuid')
 const argon = require('argon2')
+const dayjs = require('dayjs')
 const axios = require('axios')
 const cred = require('./cred.json')
 const key = require('./utilities/key')
@@ -81,11 +82,32 @@ app.post(
           ...additionalClaims,
           password: hashedPassword,
         }
-        await admin
-          .firestore()
-          .collection('users')
-          .doc(userId)
-          .set(userData)
+
+        const userProfile = {
+          userId: userId,
+          lastFetch: Date.now(),
+          isFirstLogin: true,
+          profileData: {
+            firstName: req.body.firstName,
+            username: req.body.username,
+            userSince: dayjs().year(),
+            savedProspects: '0'
+          }
+        }
+
+        const usernameData = {
+          userId: userId
+        }
+
+        const userDoc = db.doc(`users/${userId}`)
+        const userProfileDoc = db.doc(`userProfiles/${userId}`)
+        const usernameDoc = db.doc(`usernames/${req.body.username}`)
+
+        const batch = db.batch()
+
+        batch.set(userDoc, userData)
+        batch.set(userProfileDoc, userProfile)
+        batch.set(usernameDoc, usernameData)
   
         res.status(201).send({ token: customToken, userData: { ...additionalClaims } })
       } catch (error) {
@@ -94,6 +116,44 @@ app.post(
     }
   }
 )
+
+// CHECK USERNAME AVAILABILITY
+app.post(
+  '/check_username',
+  [
+    check('username')
+      .not()
+      .isEmpty()
+      .trim()
+      .escape()
+      .custom((value, { res }) => {
+        if (!(value.length >= 3) && !(value.length <=15)) {
+          res.send({code: 422, message: 'Username must be between 3 and 15 characters!'})
+        }
+        return true
+      }),
+  ],
+  async (req, res) => {
+    handleValidationResults(req, res)
+
+    try {
+      let usernameAvailable = false
+  
+      const usernameRef = db.doc(`usernames/${req.body.username}`)
+      const { exists } = await usernameRef.get()
+      usernameAvailable = !exists
+
+      if (usernameAvailable) {
+        res.send({availability: 'Username is available!'})
+      } else {
+        res.send({availability: 'Username already taken'})
+      }
+    } catch (error) {
+      res.send({code: 422, error: error})
+    }
+  }
+)
+
 
 // LOGIN ROUTE
 app.post(
@@ -132,9 +192,9 @@ app.post(
           .auth()
           .createCustomToken(userId, additionalClaims)
 
-        res.status(200).send({token: customToken, userData: { ...additionalClaims }})
+        res.status(200).send({token: customToken})
       } else {
-        errorMessage = 'Email or password is invalid, or user record does not exist'
+        errorMessage = 'Email or password is incorrect, or user record does not exist'
         res.send({code: 400, message: errorMessage})
       }
     } catch (error) {
