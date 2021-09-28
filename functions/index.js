@@ -134,7 +134,7 @@ app.post(
       }),
   ],
   async (req, res) => {
-    handleValidationResults(req, res)
+    handleValidationResults(req)
 
     try {
       let usernameAvailable = false
@@ -203,6 +203,55 @@ app.post(
   }
 )
 
+// ADD NEW JOB PROSPECT
+app.post(
+  '/new-prospect',
+  [
+    check('userId').not().isEmpty().trim().escape(),
+    check('companyName').not().isEmpty().trim().escape(),
+    check('address').not().isEmpty().trim().escape(),
+    check('coordinates').not().isEmpty().trim().escape(),
+    check('website').not().isEmpty().trim().escape(),
+    check('jobAppliedFor').not().isEmpty().trim().escape(),
+    check('contactPerson').not().isEmpty().trim().escape(),
+    check('contactEmail').not().isEmpty().trim().escape(),
+  ],
+  async (req, res) => {
+    handleValidationResults(req)
+
+    try {
+      const companyName = req.body.companyName
+      const address = req.body.address
+      const coordinates = req.body.coordinates
+      const website = req.body.website
+      const jobAppliedFor = req.body.jobAppliedFor
+      const contactPerson = req.body.contactPerson
+      const contactEmail = req.body.contactEmail
+
+      const userDocRef = db.doc(`users/${req.body.userId}`)
+      const { exists } = await userDocRef.get()
+
+      if (!exists) {
+        res.send({code: 403, message: 'No user found. You need an account to add a new prospect!' })
+      } else {
+        db.collection('prospects')
+          .doc(`${req.body.userId}`)
+          .set({
+            companyName,
+            address,
+            coordinates,
+            website,
+            jobAppliedFor,
+            contactPerson,
+            contactEmail
+          })
+        res.status(201).send({message: 'New prospect added!'})
+      }
+    } catch (error) {
+      res.send({code: 422, caughtError: error})
+    }
+  }
+)
 
 // GET LAT/LNG COORDINATES
 app.post(
