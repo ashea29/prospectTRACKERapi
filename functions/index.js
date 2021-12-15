@@ -16,7 +16,7 @@ admin.initializeApp({
 })
 
 const app = express()
-app.use(cors({ origin: '*' }))
+app.use(cors())
 
 const db = admin.firestore()
 
